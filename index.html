@@ -3,310 +3,263 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BrasilSim - Simulação Política Brasileira</title>
-    
-    <!-- Tailwind CSS -->
+    <title>BrasilSim - Simulador Político Brasileiro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Configuração do Tailwind -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'brasil-green': '#009739',
-                        'brasil-yellow': '#FEDD00',
-                        'brasil-blue': '#012169'
-                    },
-                    fontFamily: {
-                        'sans': ['Inter', 'system-ui', 'sans-serif']
+                        'brasil-green': '#009639',
+                        'brasil-yellow': '#FEDF00',
+                        'brasil-blue': '#002776'
                     }
                 }
             }
         }
     </script>
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Ícones Lucide -->
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    
-    <!-- CSS customizado -->
-    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #009639 0%, #FEDF00 50%, #002776 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+<body class="bg-gray-50 min-h-screen">
+    <!-- Loading Screen -->
+    <div id="loading" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-brasil-green mx-auto mb-4"></div>
+            <p class="text-xl font-semibold text-gray-700">Carregando BrasilSim...</p>
+        </div>
+    </div>
+
     <!-- Header -->
-    <header class="bg-white shadow-lg border-b-4 border-brasil-green">
-        <div class="container mx-auto px-4 py-4">
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <div class="w-12 h-12 bg-gradient-to-br from-brasil-green to-brasil-blue rounded-lg flex items-center justify-center">
-                        <span class="text-white font-bold text-xl">🇧🇷</span>
-                    </div>
+                    <div class="text-3xl">🇧🇷</div>
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-800">BrasilSim</h1>
-                        <p class="text-sm text-gray-600">Simulação Política Brasileira</p>
+                        <h1 class="text-3xl font-bold">BrasilSim</h1>
+                        <p class="text-sm opacity-90">Simulador Político Brasileiro</p>
                     </div>
                 </div>
-                
-                <nav class="hidden md:flex space-x-6">
-                    <button onclick="showPage('home')" class="nav-btn active" data-page="home">
-                        <i data-lucide="home" class="w-4 h-4"></i>
-                        Início
-                    </button>
-                    <button onclick="showPage('create')" class="nav-btn" data-page="create">
-                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                        Criar Estado
-                    </button>
-                    <button onclick="showPage('dashboard')" class="nav-btn" data-page="dashboard">
-                        <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
-                        Meu Estado
-                    </button>
-                    <button onclick="showPage('rankings')" class="nav-btn" data-page="rankings">
-                        <i data-lucide="trophy" class="w-4 h-4"></i>
-                        Rankings
-                    </button>
+                <nav id="nav-menu" class="hidden md:flex space-x-6">
+                    <button onclick="showHome()" class="hover:text-brasil-yellow transition-colors">Início</button>
+                    <button onclick="showRankings()" class="hover:text-brasil-yellow transition-colors">Rankings</button>
                 </nav>
-                
-                <!-- Menu mobile -->
-                <button class="md:hidden" onclick="toggleMobileMenu()">
-                    <i data-lucide="menu" class="w-6 h-6"></i>
-                </button>
-            </div>
-            
-            <!-- Menu mobile expandido -->
-            <div id="mobile-menu" class="hidden md:hidden mt-4 space-y-2">
-                <button onclick="showPage('home')" class="mobile-nav-btn w-full" data-page="home">
-                    <i data-lucide="home" class="w-4 h-4"></i>
-                    Início
-                </button>
-                <button onclick="showPage('create')" class="mobile-nav-btn w-full" data-page="create">
-                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                    Criar Estado
-                </button>
-                <button onclick="showPage('dashboard')" class="mobile-nav-btn w-full" data-page="dashboard">
-                    <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
-                    Meu Estado
-                </button>
-                <button onclick="showPage('rankings')" class="mobile-nav-btn w-full" data-page="rankings">
-                    <i data-lucide="trophy" class="w-4 h-4"></i>
-                    Rankings
-                </button>
             </div>
         </div>
     </header>
 
-    <!-- Conteúdo principal -->
+    <!-- Main Content -->
     <main class="container mx-auto px-4 py-8">
-        <!-- Página Inicial -->
-        <div id="page-home" class="page active">
+        <!-- Home Screen -->
+        <div id="home-screen" class="screen">
             <div class="text-center mb-12">
-                <h2 class="text-4xl font-bold text-gray-800 mb-4">
-                    Bem-vindo ao BrasilSim! 🇧🇷
-                </h2>
+                <h2 class="text-4xl font-bold text-gray-800 mb-4">Bem-vindo ao BrasilSim!</h2>
                 <p class="text-xl text-gray-600 max-w-3xl mx-auto">
-                    Crie e administre seu próprio estado fictício do Brasil. Tome decisões políticas, 
+                    Crie e administre seu próprio estado brasileiro fictício. Tome decisões políticas, 
                     gerencie indicadores sociais e econômicos, e compete com outros jogadores nos rankings nacionais!
                 </p>
             </div>
 
-            <div class="grid md:grid-cols-3 gap-8 mb-12">
-                <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                    <div class="w-12 h-12 bg-brasil-green rounded-lg flex items-center justify-center mb-4">
-                        <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
+            <!-- Create State Form -->
+            <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8 card-hover">
+                <h3 class="text-2xl font-bold text-center mb-6 text-gray-800">Criar Meu Estado</h3>
+                
+                <form id="create-state-form" class="space-y-6">
+                    <div>
+                        <label for="state-name" class="block text-sm font-medium text-gray-700 mb-2">
+                            Nome do Estado
+                        </label>
+                        <input 
+                            type="text" 
+                            id="state-name" 
+                            name="name"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brasil-green focus:border-transparent"
+                            placeholder="Ex: República de Brasilândia"
+                            required
+                        >
                     </div>
-                    <h3 class="text-xl font-semibold mb-2">Crie seu Estado</h3>
-                    <p class="text-gray-600 mb-4">
-                        Escolha o nome, região e tipo de governo do seu estado fictício.
-                    </p>
-                    <button onclick="showPage('create')" class="btn-primary">
-                        Começar Agora
-                    </button>
-                </div>
 
-                <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                    <div class="w-12 h-12 bg-brasil-blue rounded-lg flex items-center justify-center mb-4">
-                        <i data-lucide="trending-up" class="w-6 h-6 text-white"></i>
+                    <div>
+                        <label for="state-region" class="block text-sm font-medium text-gray-700 mb-2">
+                            Região de Origem
+                        </label>
+                        <select 
+                            id="state-region" 
+                            name="region"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brasil-green focus:border-transparent"
+                            required
+                        >
+                            <option value="">Selecione uma região</option>
+                        </select>
                     </div>
-                    <h3 class="text-xl font-semibold mb-2">Tome Decisões</h3>
-                    <p class="text-gray-600 mb-4">
-                        Enfrente dilemas políticos que afetam economia, educação, saúde e mais.
-                    </p>
-                    <button onclick="showPage('dashboard')" class="btn-secondary">
-                        Ver Dashboard
-                    </button>
-                </div>
 
-                <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-                    <div class="w-12 h-12 bg-brasil-yellow rounded-lg flex items-center justify-center mb-4">
-                        <i data-lucide="trophy" class="w-6 h-6 text-gray-800"></i>
+                    <div>
+                        <label for="state-government" class="block text-sm font-medium text-gray-700 mb-2">
+                            Tipo de Governo
+                        </label>
+                        <select 
+                            id="state-government" 
+                            name="government_type"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brasil-green focus:border-transparent"
+                            required
+                        >
+                            <option value="">Selecione um tipo de governo</option>
+                        </select>
                     </div>
-                    <h3 class="text-xl font-semibold mb-2">Compete nos Rankings</h3>
-                    <p class="text-gray-600 mb-4">
-                        Veja como seu estado se compara com outros em diversos indicadores.
-                    </p>
-                    <button onclick="showPage('rankings')" class="btn-secondary">
-                        Ver Rankings
+
+                    <button 
+                        type="submit" 
+                        class="w-full bg-brasil-green text-white py-3 px-6 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                    >
+                        Criar Meu Estado
                     </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard Screen -->
+        <div id="dashboard-screen" class="screen hidden">
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 id="state-title" class="text-3xl font-bold text-gray-800"></h2>
+                        <p id="state-info" class="text-gray-600"></p>
+                    </div>
+                    <div class="text-right">
+                        <p id="status-message" class="text-lg font-semibold"></p>
+                        <p class="text-sm text-gray-500">Decisões tomadas: <span id="decisions-count">0</span></p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Status do jogo -->
-            <div class="bg-white rounded-xl shadow-lg p-6">
-                <h3 class="text-xl font-semibold mb-4">Status do Jogo</h3>
-                <div id="game-stats" class="grid md:grid-cols-4 gap-4">
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-brasil-green" id="total-states">-</div>
-                        <div class="text-sm text-gray-600">Estados Criados</div>
+            <!-- Indicators Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow-lg p-6 card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700">Economia</h3>
+                        <span class="text-2xl">💰</span>
                     </div>
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-brasil-blue" id="total-decisions">-</div>
-                        <div class="text-sm text-gray-600">Decisões Tomadas</div>
+                    <div class="text-3xl font-bold text-brasil-green" id="economy-value">50</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div class="bg-brasil-green h-2 rounded-full" id="economy-bar" style="width: 50%"></div>
                     </div>
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-brasil-yellow" id="avg-score">-</div>
-                        <div class="text-sm text-gray-600">Pontuação Média</div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-lg p-6 card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700">Educação</h3>
+                        <span class="text-2xl">📚</span>
                     </div>
-                    <div class="text-center">
-                        <div class="text-2xl font-bold text-gray-700" id="last-update">-</div>
-                        <div class="text-sm text-gray-600">Última Atualização</div>
+                    <div class="text-3xl font-bold text-blue-600" id="education-value">50</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div class="bg-blue-600 h-2 rounded-full" id="education-bar" style="width: 50%"></div>
                     </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-lg p-6 card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700">Saúde</h3>
+                        <span class="text-2xl">🏥</span>
+                    </div>
+                    <div class="text-3xl font-bold text-red-600" id="health-value">50</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div class="bg-red-600 h-2 rounded-full" id="health-bar" style="width: 50%"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-lg p-6 card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700">Segurança</h3>
+                        <span class="text-2xl">🛡️</span>
+                    </div>
+                    <div class="text-3xl font-bold text-purple-600" id="security-value">50</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div class="bg-purple-600 h-2 rounded-full" id="security-bar" style="width: 50%"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-lg p-6 card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700">Cultura</h3>
+                        <span class="text-2xl">🎭</span>
+                    </div>
+                    <div class="text-3xl font-bold text-yellow-600" id="culture-value">50</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div class="bg-yellow-600 h-2 rounded-full" id="culture-bar" style="width: 50%"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-lg p-6 card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700">Satisfação</h3>
+                        <span class="text-2xl">😊</span>
+                    </div>
+                    <div class="text-3xl font-bold text-green-600" id="satisfaction-value">50</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div class="bg-green-600 h-2 rounded-full" id="satisfaction-bar" style="width: 50%"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-lg p-6 card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700">Corrupção</h3>
+                        <span class="text-2xl">💸</span>
+                    </div>
+                    <div class="text-3xl font-bold text-red-500" id="corruption-value">50</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div class="bg-red-500 h-2 rounded-full" id="corruption-bar" style="width: 50%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Decision Panel -->
+            <div id="decision-panel" class="bg-white rounded-lg shadow-lg p-8">
+                <h3 class="text-2xl font-bold mb-6 text-gray-800">Decisão Política</h3>
+                <div id="decision-content">
+                    <button 
+                        onclick="loadDecision()" 
+                        class="bg-brasil-blue text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-800 transition-colors"
+                    >
+                        Buscar Nova Decisão
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Página Criar Estado -->
-        <div id="page-create" class="page">
-            <div class="max-w-2xl mx-auto">
-                <div class="bg-white rounded-xl shadow-lg p-8">
-                    <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">
-                        Criar Novo Estado 🏛️
-                    </h2>
-                    
-                    <form id="create-state-form" class="space-y-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Nome do Estado *
-                            </label>
-                            <input 
-                                type="text" 
-                                id="state-name" 
-                                required
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brasil-green focus:border-transparent"
-                                placeholder="Ex: Estado da Esperança"
-                                maxlength="50"
-                            >
-                            <p class="text-xs text-gray-500 mt-1">Escolha um nome único e criativo!</p>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Região *
-                            </label>
-                            <select 
-                                id="state-region" 
-                                required
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brasil-green focus:border-transparent"
-                            >
-                                <option value="">Selecione uma região</option>
-                                <option value="Norte">Norte</option>
-                                <option value="Nordeste">Nordeste</option>
-                                <option value="Centro-Oeste">Centro-Oeste</option>
-                                <option value="Sudeste">Sudeste</option>
-                                <option value="Sul">Sul</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Tipo de Governo *
-                            </label>
-                            <div class="space-y-3">
-                                <label class="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                    <input type="radio" name="government-type" value="Democracia" class="mt-1">
-                                    <div>
-                                        <div class="font-medium">Democracia</div>
-                                        <div class="text-sm text-gray-600">Governo eleito pelo povo, foca na satisfação popular</div>
-                                    </div>
-                                </label>
-                                <label class="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                    <input type="radio" name="government-type" value="Tecnocracia" class="mt-1">
-                                    <div>
-                                        <div class="font-medium">Tecnocracia</div>
-                                        <div class="text-sm text-gray-600">Governo de especialistas, foca em eficiência e dados</div>
-                                    </div>
-                                </label>
-                                <label class="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                                    <input type="radio" name="government-type" value="Coronelismo" class="mt-1">
-                                    <div>
-                                        <div class="font-medium">Coronelismo</div>
-                                        <div class="text-sm text-gray-600">Poder local concentrado, tradições regionais fortes</div>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <h4 class="font-medium text-blue-800 mb-2">ℹ️ Informações Importantes</h4>
-                            <ul class="text-sm text-blue-700 space-y-1">
-                                <li>• Todos os indicadores começam em 50/100</li>
-                                <li>• Você pode tomar uma decisão política a cada 24 horas</li>
-                                <li>• Suas escolhas afetam economia, educação, saúde, segurança, cultura, satisfação popular e corrupção</li>
-                                <li>• Acompanhe os rankings para ver como está se saindo!</li>
-                            </ul>
-                        </div>
-
-                        <button type="submit" class="w-full btn-primary text-lg py-4">
-                            <i data-lucide="plus-circle" class="w-5 h-5 mr-2"></i>
-                            Criar Meu Estado
-                        </button>
-                    </form>
-                </div>
+        <!-- Rankings Screen -->
+        <div id="rankings-screen" class="screen hidden">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-4">Rankings Nacionais</h2>
+                <p class="text-gray-600">Veja como seu estado se compara com outros jogadores</p>
             </div>
-        </div>
 
-        <!-- Página Dashboard -->
-        <div id="page-dashboard" class="page">
-            <div id="dashboard-content">
-                <!-- Conteúdo será carregado dinamicamente -->
-            </div>
-        </div>
-
-        <!-- Página Rankings -->
-        <div id="page-rankings" class="page">
-            <div id="rankings-content">
-                <!-- Conteúdo será carregado dinamicamente -->
+            <div id="rankings-content" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Rankings will be loaded here -->
             </div>
         </div>
     </main>
 
-    <!-- Loading overlay -->
-    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
-            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-brasil-green"></div>
-            <span class="text-gray-700">Carregando...</span>
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; 2024 BrasilSim - Simulador Político Brasileiro</p>
+            <p class="text-sm text-gray-400 mt-2">Feito com ❤️ para o Brasil</p>
         </div>
-    </div>
-
-    <!-- Toast notifications -->
-    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+    </footer>
 
     <!-- Scripts -->
-    <script src="js/api.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/components.js"></script>
     <script src="js/app.js"></script>
-    
-    <script>
-        // Inicializar ícones Lucide
-        lucide.createIcons();
-        
-        // Inicializar aplicação
-        document.addEventListener('DOMContentLoaded', function() {
-            initApp();
-        });
-    </script>
 </body>
 </html>
 

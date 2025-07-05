@@ -1,8 +1,8 @@
-"""
-Inicialização dos modelos
-"""
 from flask_sqlalchemy import SQLAlchemy
 
-# Instância única do SQLAlchemy
 db = SQLAlchemy()
+
+# Importa todos os modelos para garantir que sejam registrados
+from .state import State
+from .decision import Decision
 

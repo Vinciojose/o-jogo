@@ -1,204 +1,224 @@
-"""
-Rotas para Estados - BrasilSim
-"""
 from flask import Blueprint, request, jsonify
-from src.models.state import State
-from src.models.decision import Decision
-from src.models import db
-import uuid
+from src.models import db, State, Decision
+from datetime import datetime, timedelta
 
 states_bp = Blueprint('states', __name__)
 
 @states_bp.route('/states', methods=['POST'])
 def create_state():
-    """Criar novo estado"""
+    """Cria um novo estado"""
     try:
         data = request.get_json()
         
-        # Validar dados obrigatórios
-        if not data or not all(k in data for k in ["name", "region", "government"]):
-            return jsonify({
-                "error": "Dados obrigatórios: name, region, government"
-            }), 400
+        # Validação dos dados
+        if not data or not all(k in data for k in ['name', 'region', 'government_type']):
+            return jsonify({'error': 'Dados incompletos. Nome, região e tipo de governo são obrigatórios.'}), 400
         
-        name = data["name"].strip()
-        region = data["region"]
-        government = data["government"]
-        
-        # Validar região
-        valid_regions = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul']
-        if region not in valid_regions:
-            return jsonify({
-                'error': f'Região deve ser uma de: {", ".join(valid_regions)}'
-            }), 400
-        
-        # Validar governo
-        valid_governments = ['Democracia', 'Tecnocracia', 'Coronelismo']
-        if government not in valid_governments:
-            return jsonify({
-                'error': f'Governo deve ser um de: {", ".join(valid_governments)}'
-            }), 400
-        
-        # Verificar se nome já existe
-        existing_state = State.query.filter_by(name=name).first()
+        # Verifica se o nome já existe
+        existing_state = State.query.filter_by(name=data['name']).first()
         if existing_state:
-            return jsonify({
-                'error': 'Já existe um estado com este nome'
-            }), 409
+            return jsonify({'error': 'Já existe um estado com este nome.'}), 400
         
-        # Criar estado
-        state = State.create_state(name, region, government)
+        # Valida região e tipo de governo
+        if data['region'] not in State.get_regions():
+            return jsonify({'error': 'Região inválida.'}), 400
+        
+        if data['government_type'] not in State.get_government_types():
+            return jsonify({'error': 'Tipo de governo inválido.'}), 400
+        
+        # Cria o estado
+        state = State(
+            name=data['name'],
+            region=data['region'],
+            government_type=data['government_type']
+        )
+        
+        db.session.add(state)
+        db.session.commit()
         
         return jsonify({
             'success': True,
-            'message': f'Estado {name} criado com sucesso!',
+            'message': f'Estado {state.name} criado com sucesso!',
             'state': state.to_dict()
         }), 201
         
     except Exception as e:
-        return jsonify({
-            'error': f'Erro interno do servidor: {str(e)}'
-        }), 500
+        db.session.rollback()
+        return jsonify({'error': f'Erro interno: {str(e)}'}), 500
 
-@states_bp.route('/states/<state_id>', methods=['GET'])
+@states_bp.route('/states/<int:state_id>', methods=['GET'])
 def get_state(state_id):
-    """Buscar estado por ID"""
+    """Busca um estado pelo ID"""
     try:
-        # Validar UUID
-        try:
-            uuid.UUID(state_id)
-        except ValueError:
-            return jsonify({'error': 'ID inválido'}), 400
-        
-        state = State.get_by_id(state_id)
+        state = State.query.get(state_id)
         if not state:
-            return jsonify({'error': 'Estado não encontrado'}), 404
+            return jsonify({'error': 'Estado não encontrado.'}), 404
         
         return jsonify({
-            'state': state.to_dict()
-        }), 200
+            'success': True,
+            'state': state.to_dict(),
+            'status_message': state.get_status_message()
+        })
         
     except Exception as e:
-        return jsonify({
-            'error': f'Erro interno do servidor: {str(e)}'
-        }), 500
+        return jsonify({'error': f'Erro interno: {str(e)}'}), 500
 
 @states_bp.route('/states', methods=['GET'])
 def list_states():
-    """Listar todos os estados"""
+    """Lista todos os estados"""
     try:
-        states = State.get_all_states()
+        states = State.query.all()
         return jsonify({
+            'success': True,
             'states': [state.to_dict() for state in states],
             'total': len(states)
-        }), 200
+        })
         
     except Exception as e:
-        return jsonify({
-            'error': f'Erro interno do servidor: {str(e)}'
-        }), 500
+        return jsonify({'error': f'Erro interno: {str(e)}'}), 500
 
-@states_bp.route('/states/<state_id>/decision', methods=['PATCH'])
+@states_bp.route('/states/<int:state_id>/decision', methods=['POST'])
 def apply_decision(state_id):
-    """Aplicar decisão política ao estado"""
+    """Aplica uma decisão ao estado"""
     try:
-        # Validar UUID
-        try:
-            uuid.UUID(state_id)
-        except ValueError:
-            return jsonify({'error': 'ID inválido'}), 400
-        
         data = request.get_json()
-        if not data or 'decisionId' not in data or 'optionIndex' not in data:
-            return jsonify({
-                'error': 'Dados obrigatórios: decisionId, optionIndex'
-            }), 400
         
-        state = State.get_by_id(state_id)
+        if not data or 'option_index' not in data:
+            return jsonify({'error': 'Índice da opção é obrigatório.'}), 400
+        
+        state = State.query.get(state_id)
         if not state:
-            return jsonify({'error': 'Estado não encontrado'}), 404
+            return jsonify({'error': 'Estado não encontrado.'}), 404
         
-        # Verificar cooldown
-        if not state.can_make_decision():
-            return jsonify({
-                'error': 'Você deve aguardar 24 horas entre decisões'
-            }), 429
+        # Verifica cooldown (opcional - pode ser removido para testes)
+        # if state.last_decision and datetime.utcnow() - state.last_decision < timedelta(hours=1):
+        #     return jsonify({'error': 'Você deve aguardar antes de tomar outra decisão.'}), 429
         
-        # Buscar decisão
-        decision = Decision.query.get(data['decisionId'])
-        if not decision:
-            return jsonify({'error': 'Decisão não encontrada'}), 404
+        # Busca uma decisão (do banco ou padrão)
+        decision = Decision.get_random_decision()
         
-        # Validar opção
-        options = decision.get_options()
-        option_index = data['optionIndex']
+        option_index = data['option_index']
+        if option_index < 0 or option_index >= len(decision.options):
+            return jsonify({'error': 'Opção inválida.'}), 400
         
-        if option_index < 0 or option_index >= len(options):
-            return jsonify({'error': 'Índice de opção inválido'}), 400
+        # Aplica os efeitos da decisão
+        chosen_option = decision.options[option_index]
+        effects = chosen_option.get('effects', {})
         
-        selected_option = options[option_index]
-        
-        # Aplicar efeitos
-        effects = selected_option.get('effects', {})
-        state.update_indicators(effects)
-        
-        # Registrar decisão no histórico
-        decision_record = {
-            'decisionId': str(decision.id),
-            'title': decision.title,
-            'selectedOption': selected_option['text'],
-            'effects': effects
-        }
-        state.add_decision(decision_record)
-        
-        # Salvar no banco
+        state.apply_decision_effects(effects)
         db.session.commit()
         
         return jsonify({
+            'success': True,
             'message': 'Decisão aplicada com sucesso!',
+            'decision': decision.to_dict(),
+            'chosen_option': chosen_option,
             'state': state.to_dict(),
-            'appliedEffects': effects
-        }), 200
+            'status_message': state.get_status_message()
+        })
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'error': f'Erro interno do servidor: {str(e)}'
-        }), 500
+        return jsonify({'error': f'Erro interno: {str(e)}'}), 500
 
-@states_bp.route('/states/<state_id>/random-decision', methods=['GET'])
-def get_random_decision(state_id):
-    """Obter decisão aleatória para o estado"""
+@states_bp.route('/states/<int:state_id>/current-decision', methods=['GET'])
+def get_current_decision(state_id):
+    """Busca uma decisão atual para o estado"""
     try:
-        # Validar UUID
-        try:
-            uuid.UUID(state_id)
-        except ValueError:
-            return jsonify({'error': 'ID inválido'}), 400
-        
-        state = State.get_by_id(state_id)
+        state = State.query.get(state_id)
         if not state:
-            return jsonify({'error': 'Estado não encontrado'}), 404
+            return jsonify({'error': 'Estado não encontrado.'}), 404
         
-        # Verificar cooldown
-        if not state.can_make_decision():
-            return jsonify({
-                'error': 'Você deve aguardar 24 horas entre decisões',
-                'canMakeDecision': False
-            }), 429
-        
-        # Buscar decisão aleatória
-        decision = Decision.get_random_decision(state)
-        if not decision:
-            return jsonify({'error': 'Nenhuma decisão disponível'}), 404
+        # Busca uma decisão aleatória
+        decision = Decision.get_random_decision()
         
         return jsonify({
+            'success': True,
             'decision': decision.to_dict(),
-            'canMakeDecision': True
-        }), 200
+            'state': state.to_dict()
+        })
         
     except Exception as e:
+        return jsonify({'error': f'Erro interno: {str(e)}'}), 500
+
+@states_bp.route('/regions', methods=['GET'])
+def get_regions():
+    """Retorna as regiões disponíveis"""
+    return jsonify({
+        'success': True,
+        'regions': State.get_regions()
+    })
+
+@states_bp.route('/government-types', methods=['GET'])
+def get_government_types():
+    """Retorna os tipos de governo disponíveis"""
+    return jsonify({
+        'success': True,
+        'government_types': State.get_government_types()
+    })
+
+@states_bp.route('/rankings', methods=['GET'])
+def get_rankings():
+    """Retorna os rankings dos estados"""
+    try:
+        states = State.query.all()
+        
+        if not states:
+            return jsonify({
+                'success': True,
+                'rankings': {},
+                'message': 'Nenhum estado encontrado.'
+            })
+        
+        # Calcula diferentes rankings
+        rankings = {
+            'economia': sorted(states, key=lambda s: s.economy, reverse=True)[:10],
+            'educacao': sorted(states, key=lambda s: s.education, reverse=True)[:10],
+            'saude': sorted(states, key=lambda s: s.health, reverse=True)[:10],
+            'seguranca': sorted(states, key=lambda s: s.security, reverse=True)[:10],
+            'cultura': sorted(states, key=lambda s: s.culture, reverse=True)[:10],
+            'satisfacao': sorted(states, key=lambda s: s.satisfaction, reverse=True)[:10],
+            'menos_corrupto': sorted(states, key=lambda s: s.corruption)[:10],
+            'geral': sorted(states, key=lambda s: (s.economy + s.education + s.health + s.security + s.culture + s.satisfaction - s.corruption) / 6, reverse=True)[:10]
+        }
+        
+        # Converte para formato JSON
+        rankings_json = {}
+        for category, state_list in rankings.items():
+            rankings_json[category] = []
+            for i, state in enumerate(state_list):
+                # Calcula o score baseado na categoria
+                if category == 'economia':
+                    score = state.economy
+                elif category == 'educacao':
+                    score = state.education
+                elif category == 'saude':
+                    score = state.health
+                elif category == 'seguranca':
+                    score = state.security
+                elif category == 'cultura':
+                    score = state.culture
+                elif category == 'satisfacao':
+                    score = state.satisfaction
+                elif category == 'menos_corrupto':
+                    score = state.corruption
+                elif category == 'geral':
+                    score = round((state.economy + state.education + state.health + state.security + state.culture + state.satisfaction - state.corruption) / 6, 1)
+                else:
+                    score = 0
+                
+                rankings_json[category].append({
+                    'position': i + 1,
+                    'state': state.to_dict(),
+                    'score': score
+                })
+        
         return jsonify({
-            'error': f'Erro interno do servidor: {str(e)}'
-        }), 500
+            'success': True,
+            'rankings': rankings_json,
+            'total_states': len(states)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Erro interno: {str(e)}'}), 500
 

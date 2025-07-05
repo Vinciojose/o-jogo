@@ -1,558 +1,526 @@
-/**
- * Aplicação principal do BrasilSim
- */
+// BrasilSim - Frontend JavaScript
+// Gerencia toda a lógica do frontend e comunicação com a API
 
 // Estado global da aplicação
-const AppState = {
-    currentPage: 'home',
-    currentState: null,
-    currentDecision: null,
-    rankings: null,
-    gameStats: null
-};
+let currentState = null;
+let currentDecision = null;
 
-/**
- * Inicialização da aplicação
- */
-async function initApp() {
-    console.log('🚀 Inicializando BrasilSim...');
+// URLs da API
+const API_BASE = '/api';
+
+// Inicialização da aplicação
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🇧🇷 BrasilSim iniciado!');
     
-    // Verificar conectividade com a API
-    const isConnected = await initAPI();
-    if (!isConnected) {
-        showToast('Não foi possível conectar ao servidor. Algumas funcionalidades podem não funcionar.', 'warning');
-    }
-
-    // Carregar página inicial baseada na URL
-    const urlParams = getURLParams();
-    const initialPage = urlParams.page || 'home';
+    // Esconde o loading após um breve delay
+    setTimeout(() => {
+        document.getElementById('loading').style.display = 'none';
+    }, 1000);
     
-    // Verificar se o usuário já tem um estado
-    const stateId = Storage.getStateId();
-    if (stateId && initialPage === 'home') {
-        showPage('dashboard');
-    } else {
-        showPage(initialPage);
-    }
-
-    // Configurar event listeners
+    // Carrega dados iniciais
+    loadInitialData();
+    
+    // Configura event listeners
     setupEventListeners();
     
-    // Carregar estatísticas do jogo
-    loadGameStats();
-    
-    console.log('✅ BrasilSim inicializado com sucesso!');
+    // Verifica se há um estado salvo localmente
+    checkSavedState();
+});
+
+// Carrega dados iniciais (regiões e tipos de governo)
+async function loadInitialData() {
+    try {
+        // Carrega regiões
+        const regionsResponse = await fetch(`${API_BASE}/regions`);
+        const regionsData = await regionsResponse.json();
+        
+        if (regionsData.success) {
+            const regionSelect = document.getElementById('state-region');
+            regionsData.regions.forEach(region => {
+                const option = document.createElement('option');
+                option.value = region;
+                option.textContent = region;
+                regionSelect.appendChild(option);
+            });
+        }
+        
+        // Carrega tipos de governo
+        const govResponse = await fetch(`${API_BASE}/government-types`);
+        const govData = await govResponse.json();
+        
+        if (govData.success) {
+            const govSelect = document.getElementById('state-government');
+            govData.government_types.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                govSelect.appendChild(option);
+            });
+        }
+        
+    } catch (error) {
+        console.error('Erro ao carregar dados iniciais:', error);
+        showNotification('Erro ao carregar dados iniciais', 'error');
+    }
 }
 
-/**
- * Configurar event listeners
- */
+// Configura event listeners
 function setupEventListeners() {
     // Formulário de criação de estado
     const createForm = document.getElementById('create-state-form');
-    if (createForm) {
-        createForm.addEventListener('submit', handleCreateState);
-    }
-
-    // Navegação por teclado
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            // Fechar modais ou voltar
-            const overlay = document.getElementById('loading-overlay');
-            if (overlay && !overlay.classList.contains('hidden')) {
-                showLoading(false);
-            }
-        }
-    });
-
-    // Atualizar ícones quando necessário
-    document.addEventListener('DOMContentLoaded', () => {
-        lucide.createIcons();
-    });
+    createForm.addEventListener('submit', handleCreateState);
 }
 
-/**
- * Navegação entre páginas
- */
-function showPage(pageName) {
-    // Ocultar todas as páginas
-    document.querySelectorAll('.page').forEach(page => {
-        page.classList.remove('active');
-    });
-
-    // Mostrar página selecionada
-    const targetPage = document.getElementById(`page-${pageName}`);
-    if (targetPage) {
-        targetPage.classList.add('active');
-        AppState.currentPage = pageName;
-        
-        // Atualizar navegação
-        updateNavigation(pageName);
-        
-        // Carregar conteúdo específico da página
-        loadPageContent(pageName);
-        
-        // Atualizar URL
-        updateURL(pageName);
+// Verifica se há um estado salvo localmente
+function checkSavedState() {
+    const savedStateId = localStorage.getItem('brasilsim-state-id');
+    if (savedStateId) {
+        loadState(savedStateId);
     }
 }
 
-function updateNavigation(activePage) {
-    // Atualizar botões de navegação
-    document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.page === activePage) {
-            btn.classList.add('active');
-        }
-    });
-}
-
-async function loadPageContent(pageName) {
-    switch (pageName) {
-        case 'dashboard':
-            await loadDashboard();
-            break;
-        case 'rankings':
-            await loadRankings();
-            break;
-        case 'home':
-            await loadGameStats();
-            break;
-    }
+// Manipula a criação de estado
+async function handleCreateState(event) {
+    event.preventDefault();
     
-    // Recriar ícones Lucide após carregar conteúdo
-    lucide.createIcons();
-}
-
-/**
- * Menu mobile
- */
-function toggleMobileMenu() {
-    const mobileMenu = document.getElementById('mobile-menu');
-    if (mobileMenu) {
-        mobileMenu.classList.toggle('hidden');
-    }
-}
-
-/**
- * Criação de estado
- */
-async function handleCreateState(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(e.target);
+    const formData = new FormData(event.target);
     const stateData = {
-        name: formData.get('state-name') || document.getElementById('state-name').value,
-        region: formData.get('state-region') || document.getElementById('state-region').value,
-        government_type: document.querySelector('input[name="government-type"]:checked')?.value,
-        player_id: Storage.getPlayerId()
+        name: formData.get('name'),
+        region: formData.get('region'),
+        government_type: formData.get('government_type')
     };
-
-    // Validar dados
+    
+    // Validação básica
     if (!stateData.name || !stateData.region || !stateData.government_type) {
-        showToast('Por favor, preencha todos os campos obrigatórios.', 'error');
+        showNotification('Por favor, preencha todos os campos', 'error');
         return;
     }
-
+    
     try {
-        const response = await api.createState(stateData);
+        showLoading(true);
         
-        if (response.success) {
-            // Salvar ID do estado
-            Storage.setStateId(response.state.id);
-            AppState.currentState = response.state;
+        const response = await fetch(`${API_BASE}/states`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(stateData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Salva o ID do estado localmente
+            localStorage.setItem('brasilsim-state-id', data.state.id);
             
-            showToast(response.message, 'success');
+            // Carrega o estado criado
+            currentState = data.state;
             
-            // Redirecionar para dashboard
-            setTimeout(() => {
-                showPage('dashboard');
-            }, 1500);
+            showNotification(data.message, 'success');
+            showDashboard();
+        } else {
+            showNotification(data.error || 'Erro ao criar estado', 'error');
         }
+        
     } catch (error) {
         console.error('Erro ao criar estado:', error);
-        showToast(error.message || 'Erro ao criar estado. Tente novamente.', 'error');
+        showNotification('Erro de conexão. Tente novamente.', 'error');
+    } finally {
+        showLoading(false);
     }
 }
 
-/**
- * Dashboard do estado
- */
-async function loadDashboard() {
-    const dashboardContent = document.getElementById('dashboard-content');
-    if (!dashboardContent) return;
-
-    const stateId = Storage.getStateId();
-    
-    if (!stateId) {
-        dashboardContent.innerHTML = `
-            <div class="text-center py-12">
-                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i data-lucide="map-pin" class="w-8 h-8 text-gray-400"></i>
-                </div>
-                <h3 class="text-xl font-semibold mb-2">Você ainda não criou um estado</h3>
-                <p class="text-gray-600 mb-4">Crie seu estado fictício para começar a jogar!</p>
-                <button onclick="showPage('create')" class="btn-primary">
-                    <i data-lucide="plus-circle" class="w-4 h-4 mr-2"></i>
-                    Criar Meu Estado
-                </button>
-            </div>
-        `;
-        return;
-    }
-
-    // Mostrar loading
-    dashboardContent.innerHTML = createLoadingSkeleton('dashboard');
-
+// Carrega um estado pelo ID
+async function loadState(stateId) {
     try {
-        const response = await api.getState(stateId);
+        showLoading(true);
         
-        if (response.success) {
-            AppState.currentState = response.state;
-            dashboardContent.innerHTML = createStateDashboard(response.state);
-            
-            // Verificar se pode tomar decisão
-            checkDecisionAvailability();
+        const response = await fetch(`${API_BASE}/states/${stateId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            currentState = data.state;
+            showDashboard();
+            updateDashboard();
+        } else {
+            // Estado não encontrado, limpa localStorage
+            localStorage.removeItem('brasilsim-state-id');
+            showNotification('Estado não encontrado', 'error');
         }
+        
     } catch (error) {
-        console.error('Erro ao carregar dashboard:', error);
-        dashboardContent.innerHTML = `
-            <div class="text-center py-12">
-                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i data-lucide="alert-circle" class="w-8 h-8 text-red-500"></i>
-                </div>
-                <h3 class="text-xl font-semibold mb-2">Erro ao carregar estado</h3>
-                <p class="text-gray-600 mb-4">${error.message}</p>
-                <button onclick="loadDashboard()" class="btn-primary">
-                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
-                    Tentar Novamente
-                </button>
-            </div>
-        `;
+        console.error('Erro ao carregar estado:', error);
+        showNotification('Erro ao carregar estado', 'error');
+    } finally {
+        showLoading(false);
     }
 }
 
-/**
- * Verificar disponibilidade de decisão
- */
-function checkDecisionAvailability() {
-    const state = AppState.currentState;
-    if (!state) return;
-
-    const canDecide = canMakeDecision(state.last_decision_at);
-    const decisionBtn = document.getElementById('decision-btn');
+// Atualiza o dashboard com os dados do estado
+function updateDashboard() {
+    if (!currentState) return;
     
-    if (canDecide) {
-        if (decisionBtn) {
-            decisionBtn.disabled = false;
-            decisionBtn.innerHTML = `
-                <i data-lucide="zap" class="w-4 h-4 mr-2"></i>
-                Nova Decisão
-            `;
-        }
-    } else {
-        if (decisionBtn) {
-            decisionBtn.disabled = true;
-            decisionBtn.innerHTML = `
-                <i data-lucide="clock" class="w-4 h-4 mr-2"></i>
-                Aguarde...
-            `;
-        }
+    // Atualiza informações do estado
+    document.getElementById('state-title').textContent = currentState.name;
+    document.getElementById('state-info').textContent = 
+        `${currentState.region} • ${currentState.government_type}`;
+    document.getElementById('decisions-count').textContent = currentState.decisions_count;
+    
+    // Atualiza indicadores
+    const indicators = currentState.indicators;
+    updateIndicator('economy', indicators.economy);
+    updateIndicator('education', indicators.education);
+    updateIndicator('health', indicators.health);
+    updateIndicator('security', indicators.security);
+    updateIndicator('culture', indicators.culture);
+    updateIndicator('satisfaction', indicators.satisfaction);
+    updateIndicator('corruption', indicators.corruption);
+    
+    // Atualiza mensagem de status
+    updateStatusMessage();
+}
+
+// Atualiza um indicador específico
+function updateIndicator(name, value) {
+    const valueElement = document.getElementById(`${name}-value`);
+    const barElement = document.getElementById(`${name}-bar`);
+    
+    if (valueElement && barElement) {
+        valueElement.textContent = value;
+        barElement.style.width = `${value}%`;
         
-        const remainingTime = getTimeUntilNextDecision(state.last_decision_at);
-        if (remainingTime) {
-            const decisionSection = document.getElementById('decision-section');
-            if (decisionSection) {
-                decisionSection.innerHTML = createDecisionCooldown(remainingTime);
-            }
-        }
+        // Adiciona animação
+        valueElement.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+            valueElement.style.transform = 'scale(1)';
+        }, 200);
     }
 }
 
-/**
- * Carregar decisão aleatória
- */
-async function loadRandomDecision() {
-    const stateId = Storage.getStateId();
-    if (!stateId) {
-        showToast('Você precisa criar um estado primeiro!', 'error');
-        return;
+// Atualiza a mensagem de status
+function updateStatusMessage() {
+    const statusElement = document.getElementById('status-message');
+    if (!statusElement || !currentState) return;
+    
+    const indicators = currentState.indicators;
+    const avg = (indicators.satisfaction + indicators.economy + indicators.education + indicators.health) / 4;
+    
+    let message = '';
+    let className = '';
+    
+    if (avg >= 80) {
+        message = 'Seu povo está feliz da vida! 🎉';
+        className = 'text-green-600';
+    } else if (avg >= 60) {
+        message = 'As coisas estão indo bem por aí! 👍';
+        className = 'text-blue-600';
+    } else if (avg >= 40) {
+        message = 'O povo está meio desconfiado... 🤔';
+        className = 'text-yellow-600';
+    } else if (avg >= 20) {
+        message = 'Seu povo tá pistola com você! 😠';
+        className = 'text-orange-600';
+    } else {
+        message = 'Revolução à vista! Cuidado! 🔥';
+        className = 'text-red-600';
     }
+    
+    statusElement.textContent = message;
+    statusElement.className = `text-lg font-semibold ${className}`;
+}
 
-    const decisionSection = document.getElementById('decision-section');
-    if (!decisionSection) return;
-
+// Carrega uma nova decisão
+async function loadDecision() {
+    if (!currentState) return;
+    
     try {
-        const response = await api.getRandomDecision(stateId);
+        showLoading(true);
         
-        if (response.success) {
-            AppState.currentDecision = response;
-            decisionSection.innerHTML = createDecisionComponent(response);
+        const response = await fetch(`${API_BASE}/states/${currentState.id}/current-decision`);
+        const data = await response.json();
+        
+        if (data.success) {
+            currentDecision = data.decision;
+            displayDecision(currentDecision);
+        } else {
+            showNotification(data.error || 'Erro ao carregar decisão', 'error');
         }
+        
     } catch (error) {
         console.error('Erro ao carregar decisão:', error);
-        
-        if (error.message.includes('esperar')) {
-            // Erro de cooldown
-            showToast(error.message, 'warning');
-            checkDecisionAvailability();
-        } else {
-            showToast('Erro ao carregar decisão. Tente novamente.', 'error');
-        }
+        showNotification('Erro ao carregar decisão', 'error');
+    } finally {
+        showLoading(false);
     }
 }
 
-/**
- * Selecionar opção de decisão
- */
-function selectDecisionOption(optionIndex) {
-    // Remover seleção anterior
-    document.querySelectorAll('.decision-option').forEach(option => {
-        option.classList.remove('border-blue-500', 'bg-blue-50');
-        option.classList.add('border-gray-200');
-    });
-
-    // Selecionar nova opção
-    const options = document.querySelectorAll('.decision-option');
-    if (options[optionIndex]) {
-        options[optionIndex].classList.remove('border-gray-200');
-        options[optionIndex].classList.add('border-blue-500', 'bg-blue-50');
+// Exibe uma decisão na interface
+function displayDecision(decision) {
+    const contentDiv = document.getElementById('decision-content');
+    
+    const html = `
+        <div class="mb-6">
+            <h4 class="text-xl font-bold text-gray-800 mb-3">${decision.title}</h4>
+            <p class="text-gray-600 mb-6">${decision.description}</p>
+        </div>
         
-        // Marcar radio button
-        const radio = options[optionIndex].querySelector('input[type="radio"]');
-        if (radio) {
-            radio.checked = true;
-        }
-        
-        // Habilitar botão de aplicar
-        const applyBtn = document.getElementById('apply-decision-btn');
-        if (applyBtn) {
-            applyBtn.disabled = false;
-        }
-    }
+        <div class="space-y-3">
+            ${decision.options.map((option, index) => `
+                <button 
+                    onclick="applyDecision(${index})"
+                    class="w-full text-left p-4 border border-gray-300 rounded-lg hover:border-brasil-green hover:bg-green-50 transition-colors"
+                >
+                    <div class="font-semibold text-gray-800">${option.text}</div>
+                    ${option.effects ? `
+                        <div class="text-sm text-gray-500 mt-2">
+                            Efeitos: ${formatEffects(option.effects)}
+                        </div>
+                    ` : ''}
+                </button>
+            `).join('')}
+        </div>
+    `;
+    
+    contentDiv.innerHTML = html;
 }
 
-/**
- * Aplicar decisão selecionada
- */
-async function applySelectedDecision(decisionId) {
-    const selectedOption = document.querySelector('input[name="decision-option"]:checked');
-    if (!selectedOption) {
-        showToast('Selecione uma opção antes de aplicar a decisão.', 'warning');
-        return;
-    }
+// Formata os efeitos de uma decisão para exibição
+function formatEffects(effects) {
+    const effectNames = {
+        economy: 'Economia',
+        education: 'Educação',
+        health: 'Saúde',
+        security: 'Segurança',
+        culture: 'Cultura',
+        satisfaction: 'Satisfação',
+        corruption: 'Corrupção'
+    };
+    
+    return Object.entries(effects)
+        .map(([key, value]) => {
+            const name = effectNames[key] || key;
+            const sign = value > 0 ? '+' : '';
+            return `${name} ${sign}${value}`;
+        })
+        .join(', ');
+}
 
-    const stateId = Storage.getStateId();
-    if (!stateId) {
-        showToast('Estado não encontrado!', 'error');
-        return;
-    }
-
+// Aplica uma decisão
+async function applyDecision(optionIndex) {
+    if (!currentState || !currentDecision) return;
+    
     try {
-        const response = await api.applyDecision(stateId, {
-            decision_id: decisionId,
-            option_id: selectedOption.value
+        showLoading(true);
+        
+        const response = await fetch(`${API_BASE}/states/${currentState.id}/decision`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ option_index: optionIndex })
         });
-
-        if (response.success) {
-            showToast('Decisão aplicada com sucesso!', 'success');
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Atualiza o estado atual
+            currentState = data.state;
             
-            // Atualizar estado atual
-            AppState.currentState = response.state;
+            // Atualiza a interface
+            updateDashboard();
             
-            // Salvar timestamp da decisão
-            Storage.setLastDecisionTime(new Date().toISOString());
+            // Mostra resultado da decisão
+            showDecisionResult(data);
             
-            // Recarregar dashboard
-            setTimeout(() => {
-                loadDashboard();
-            }, 1500);
+            showNotification('Decisão aplicada com sucesso!', 'success');
+        } else {
+            showNotification(data.error || 'Erro ao aplicar decisão', 'error');
         }
+        
     } catch (error) {
         console.error('Erro ao aplicar decisão:', error);
-        showToast(error.message || 'Erro ao aplicar decisão. Tente novamente.', 'error');
+        showNotification('Erro ao aplicar decisão', 'error');
+    } finally {
+        showLoading(false);
     }
 }
 
-/**
- * Rankings
- */
-async function loadRankings() {
-    const rankingsContent = document.getElementById('rankings-content');
-    if (!rankingsContent) return;
-
-    // Mostrar loading
-    rankingsContent.innerHTML = `
-        <div class="mb-6">
-            <h2 class="text-3xl font-bold text-gray-800 mb-2">Rankings Nacionais 🏆</h2>
-            <p class="text-gray-600">Veja como os estados estão se saindo em diferentes indicadores</p>
+// Mostra o resultado de uma decisão
+function showDecisionResult(data) {
+    const contentDiv = document.getElementById('decision-content');
+    
+    const html = `
+        <div class="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
+            <h4 class="text-lg font-bold text-green-800 mb-2">Decisão Tomada!</h4>
+            <p class="text-green-700 mb-4">${data.chosen_option.text}</p>
+            <p class="text-sm text-green-600">
+                Efeitos: ${formatEffects(data.chosen_option.effects)}
+            </p>
         </div>
-        ${createLoadingSkeleton('rankings')}
-    `;
-
-    try {
-        const response = await api.getRankings(10);
         
-        if (response.success) {
-            AppState.rankings = response.rankings;
-            
-            rankingsContent.innerHTML = `
-                <div class="mb-6">
-                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Rankings Nacionais 🏆</h2>
-                    <p class="text-gray-600">Veja como os estados estão se saindo em diferentes indicadores</p>
-                </div>
-                
-                ${response.rankings.length > 0 ? `
-                    ${createRankingsGrid(response.rankings)}
-                    
-                    <div class="mt-8 bg-white rounded-xl shadow-lg p-6">
-                        <h3 class="text-xl font-semibold mb-4">Estatísticas Gerais</h3>
-                        ${createGameStatsComponent(response.stats)}
-                    </div>
-                ` : `
-                    <div class="text-center py-12">
-                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i data-lucide="users" class="w-8 h-8 text-gray-400"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold mb-2">Nenhum estado cadastrado ainda</h3>
-                        <p class="text-gray-600 mb-4">Seja o primeiro a criar um estado e aparecer nos rankings!</p>
-                        <button onclick="showPage('create')" class="btn-primary">
-                            <i data-lucide="plus-circle" class="w-4 h-4 mr-2"></i>
-                            Criar Meu Estado
-                        </button>
-                    </div>
-                `}
-            `;
+        <button 
+            onclick="loadDecision()" 
+            class="bg-brasil-blue text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-800 transition-colors"
+        >
+            Próxima Decisão
+        </button>
+    `;
+    
+    contentDiv.innerHTML = html;
+}
+
+// Carrega e exibe rankings
+async function loadRankings() {
+    try {
+        showLoading(true);
+        
+        const response = await fetch(`${API_BASE}/rankings`);
+        const data = await response.json();
+        
+        if (data.success) {
+            displayRankings(data.rankings);
+        } else {
+            showNotification(data.error || 'Erro ao carregar rankings', 'error');
         }
+        
     } catch (error) {
         console.error('Erro ao carregar rankings:', error);
-        rankingsContent.innerHTML = `
-            <div class="text-center py-12">
-                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i data-lucide="alert-circle" class="w-8 h-8 text-red-500"></i>
-                </div>
-                <h3 class="text-xl font-semibold mb-2">Erro ao carregar rankings</h3>
-                <p class="text-gray-600 mb-4">${error.message}</p>
-                <button onclick="loadRankings()" class="btn-primary">
-                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
-                    Tentar Novamente
-                </button>
-            </div>
-        `;
+        showNotification('Erro ao carregar rankings', 'error');
+    } finally {
+        showLoading(false);
     }
 }
 
-/**
- * Mostrar detalhes de um ranking específico
- */
-async function showRankingDetails(rankingId) {
-    const rankingsContent = document.getElementById('rankings-content');
-    if (!rankingsContent) return;
-
-    // Mostrar loading
-    rankingsContent.innerHTML = createLoadingSkeleton('rankings');
-
-    try {
-        const response = await api.getRanking(rankingId, 'all');
+// Exibe os rankings na interface
+function displayRankings(rankings) {
+    const contentDiv = document.getElementById('rankings-content');
+    
+    const rankingNames = {
+        economia: { name: 'Economia', icon: '💰' },
+        educacao: { name: 'Educação', icon: '📚' },
+        saude: { name: 'Saúde', icon: '🏥' },
+        seguranca: { name: 'Segurança', icon: '🛡️' },
+        cultura: { name: 'Cultura', icon: '🎭' },
+        satisfacao: { name: 'Satisfação', icon: '😊' },
+        menos_corrupto: { name: 'Menos Corrupto', icon: '✨' },
+        geral: { name: 'Ranking Geral', icon: '🏆' }
+    };
+    
+    const html = Object.entries(rankings).map(([category, states]) => {
+        const info = rankingNames[category] || { name: category, icon: '📊' };
         
-        if (response.success) {
-            const ranking = response.ranking;
-            
-            rankingsContent.innerHTML = `
-                <div class="mb-6">
-                    <button onclick="loadRankings()" class="btn-secondary mb-4">
-                        <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i>
-                        Voltar aos Rankings
-                    </button>
-                    <h2 class="text-3xl font-bold text-gray-800 mb-2">${ranking.title}</h2>
-                    <p class="text-gray-600">${ranking.description}</p>
+        return `
+            <div class="bg-white rounded-lg shadow-lg p-6 card-hover">
+                <div class="flex items-center mb-4">
+                    <span class="text-2xl mr-3">${info.icon}</span>
+                    <h3 class="text-xl font-bold text-gray-800">${info.name}</h3>
                 </div>
                 
-                ${createRankingComponent(ranking)}
-            `;
-        }
-    } catch (error) {
-        console.error('Erro ao carregar ranking:', error);
-        showToast('Erro ao carregar detalhes do ranking.', 'error');
-        loadRankings();
-    }
-}
-
-/**
- * Carregar estatísticas do jogo
- */
-async function loadGameStats() {
-    try {
-        const response = await api.getGameStats();
-        
-        if (response.success) {
-            AppState.gameStats = response.stats;
-            updateGameStats(response.stats);
-        }
-    } catch (error) {
-        console.warn('Não foi possível carregar estatísticas:', error);
-    }
-}
-
-function updateGameStats(stats) {
-    const elements = {
-        'total-states': stats.total_states || 0,
-        'total-decisions': stats.total_decisions || 0,
-        'avg-score': stats.average_score || 0,
-        'last-update': stats.last_updated ? formatRelativeTime(stats.last_updated) : '-'
-    };
-
-    Object.keys(elements).forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = elements[id];
-        }
-    });
-}
-
-/**
- * Funções utilitárias específicas da aplicação
- */
-function resetGame() {
-    if (confirm('Tem certeza que deseja resetar seu progresso? Esta ação não pode ser desfeita.')) {
-        Storage.clearStateId();
-        AppState.currentState = null;
-        showToast('Progresso resetado com sucesso!', 'success');
-        showPage('home');
-    }
-}
-
-function shareState() {
-    const state = AppState.currentState;
-    if (!state) {
-        showToast('Nenhum estado para compartilhar!', 'error');
-        return;
-    }
-
-    const shareText = `Confira meu estado ${state.name} no BrasilSim! Pontuação: ${state.overall_score} pts`;
+                <div class="space-y-3">
+                    ${states.slice(0, 5).map(entry => `
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div class="flex items-center">
+                                <span class="font-bold text-lg text-gray-600 w-8">${entry.position}º</span>
+                                <span class="font-semibold text-gray-800">${entry.state.name}</span>
+                            </div>
+                            <span class="font-bold text-brasil-green">${entry.score || entry.state.indicators[category] || 'N/A'}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                ${states.length === 0 ? '<p class="text-gray-500 text-center py-4">Nenhum estado encontrado</p>' : ''}
+            </div>
+        `;
+    }).join('');
     
-    if (navigator.share) {
-        navigator.share({
-            title: 'BrasilSim',
-            text: shareText,
-            url: window.location.href
-        });
-    } else {
-        // Fallback para clipboard
-        navigator.clipboard.writeText(shareText).then(() => {
-            showToast('Texto copiado para a área de transferência!', 'success');
-        });
+    contentDiv.innerHTML = html;
+}
+
+// Navegação entre telas
+function showHome() {
+    hideAllScreens();
+    document.getElementById('home-screen').classList.remove('hidden');
+}
+
+function showDashboard() {
+    hideAllScreens();
+    document.getElementById('dashboard-screen').classList.remove('hidden');
+    if (currentState) {
+        updateDashboard();
     }
 }
 
-// Expor funções globalmente para uso nos event handlers HTML
-window.showPage = showPage;
-window.toggleMobileMenu = toggleMobileMenu;
-window.loadRandomDecision = loadRandomDecision;
-window.selectDecisionOption = selectDecisionOption;
-window.applySelectedDecision = applySelectedDecision;
-window.showRankingDetails = showRankingDetails;
-window.resetGame = resetGame;
-window.shareState = shareState;
-window.initApp = initApp;
+function showRankings() {
+    hideAllScreens();
+    document.getElementById('rankings-screen').classList.remove('hidden');
+    loadRankings();
+}
+
+function hideAllScreens() {
+    const screens = document.querySelectorAll('.screen');
+    screens.forEach(screen => screen.classList.add('hidden'));
+}
+
+// Utilitários
+function showLoading(show) {
+    const loading = document.getElementById('loading');
+    if (show) {
+        loading.style.display = 'flex';
+    } else {
+        loading.style.display = 'none';
+    }
+}
+
+function showNotification(message, type = 'info') {
+    // Cria elemento de notificação
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transition-all duration-300 transform translate-x-full`;
+    
+    // Define cores baseadas no tipo
+    const colors = {
+        success: 'bg-green-500 text-white',
+        error: 'bg-red-500 text-white',
+        info: 'bg-blue-500 text-white',
+        warning: 'bg-yellow-500 text-black'
+    };
+    
+    notification.className += ` ${colors[type] || colors.info}`;
+    notification.textContent = message;
+    
+    // Adiciona ao DOM
+    document.body.appendChild(notification);
+    
+    // Anima entrada
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+    }, 100);
+    
+    // Remove após 5 segundos
+    setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 5000);
+}
+
+// Função para resetar o jogo (útil para testes)
+function resetGame() {
+    localStorage.removeItem('brasilsim-state-id');
+    currentState = null;
+    currentDecision = null;
+    showHome();
+    showNotification('Jogo resetado!', 'info');
+}
+
+// Expõe funções globais para debug
+window.brasilsim = {
+    resetGame,
+    currentState: () => currentState,
+    loadState,
+    showDashboard,
+    showRankings
+};
 
