@@ -1,0 +1,149 @@
+[
+  {
+    "id": "trabalho_infantil",
+    "title": "Proposta: Reduzir idade mínima para trabalho formal",
+    "description": "O Congresso está debatendo uma proposta para reduzir a idade mínima para trabalho formal de 16 para 14 anos.",
+    "options": [
+      {
+        "id": "aprovar",
+        "text": "Aprovar - \"Vamos dar oportunidade para a galera jovem!\"",
+        "effects": {
+          "economia": 5,
+          "educacao": -3,
+          "satisfacao_popular": -2
+        }
+      },
+      {
+        "id": "rejeitar",
+        "text": "Rejeitar - \"Criança tem que estudar, não trabalhar!\"",
+        "effects": {
+          "educacao": 4,
+          "economia": -2,
+          "satisfacao_popular": 3
+        }
+      }
+    ]
+  },
+  {
+    "id": "investimento_saude",
+    "title": "Crise na Saúde: Falta de leitos hospitalares",
+    "description": "Os hospitais estão lotados e a população está reclamando. O que fazer?",
+    "options": [
+      {
+        "id": "investir_massivo",
+        "text": "Investimento massivo - \"Saúde não tem preço!\"",
+        "effects": {
+          "saude": 8,
+          "economia": -4,
+          "satisfacao_popular": 6
+        }
+      },
+      {
+        "id": "parcerias_privadas",
+        "text": "Parcerias com setor privado - \"Vamos otimizar os recursos\"",
+        "effects": {
+          "saude": 4,
+          "economia": 2,
+          "satisfacao_popular": -1,
+          "corrupcao": 2
+        }
+      },
+      {
+        "id": "nao_fazer_nada",
+        "text": "Aguardar melhoria natural - \"A situação vai se resolver sozinha\"",
+        "effects": {
+          "saude": -3,
+          "satisfacao_popular": -5,
+          "corrupcao": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "seguranca_publica",
+    "title": "Onda de violência: Como reagir?",
+    "description": "A criminalidade aumentou 30% no último mês. Seu povo tá pistola!",
+    "options": [
+      {
+        "id": "mais_policiamento",
+        "text": "Aumentar policiamento ostensivo - \"Bandido bom é bandido preso!\"",
+        "effects": {
+          "seguranca": 6,
+          "economia": -3,
+          "satisfacao_popular": 4,
+          "corrupcao": 1
+        }
+      },
+      {
+        "id": "programas_sociais",
+        "text": "Investir em programas sociais - \"Vamos atacar a raiz do problema\"",
+        "effects": {
+          "seguranca": 3,
+          "educacao": 2,
+          "cultura": 3,
+          "economia": -2,
+          "satisfacao_popular": 2
+        }
+      }
+    ]
+  },
+  {
+    "id": "cultura_nacional",
+    "title": "Festival de Cultura: Investir ou não?",
+    "description": "Artistas estão pedindo verba para um grande festival cultural. Vale a pena?",
+    "options": [
+      {
+        "id": "investir_cultura",
+        "text": "Patrocinar o festival - \"Cultura é a alma do povo!\"",
+        "effects": {
+          "cultura": 7,
+          "economia": -2,
+          "satisfacao_popular": 4
+        }
+      },
+      {
+        "id": "negar_verba",
+        "text": "Negar verba - \"Temos prioridades mais importantes\"",
+        "effects": {
+          "economia": 1,
+          "cultura": -4,
+          "satisfacao_popular": -2
+        }
+      }
+    ]
+  },
+  {
+    "id": "corrupcao_escandalo",
+    "title": "Escândalo de Corrupção: Como lidar?",
+    "description": "Um esquema de corrupção foi descoberto no seu governo. A mídia tá em cima!",
+    "options": [
+      {
+        "id": "investigacao_completa",
+        "text": "Investigação completa e transparente - \"Vamos limpar a casa!\"",
+        "effects": {
+          "corrupcao": -6,
+          "satisfacao_popular": 5,
+          "economia": -1
+        }
+      },
+      {
+        "id": "abafar_caso",
+        "text": "Tentar abafar o caso - \"Isso vai passar...\"",
+        "effects": {
+          "corrupcao": 3,
+          "satisfacao_popular": -8,
+          "economia": 1
+        }
+      },
+      {
+        "id": "bode_expiatorio",
+        "text": "Culpar subordinados - \"Eu não sabia de nada!\"",
+        "effects": {
+          "corrupcao": -1,
+          "satisfacao_popular": -3,
+          "economia": 0
+        }
+      }
+    ]
+  }
+]

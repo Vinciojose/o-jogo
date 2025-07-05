@@ -1,0 +1,77 @@
+[
+  {
+    "id": null,
+    "name": "Estado de Teste",
+    "region": "Sudeste",
+    "government_type": "Democracia",
+    "player_id": "test123",
+    "indicators": {
+      "economia": 50,
+      "educacao": 50,
+      "saude": 50,
+      "seguranca": 50,
+      "cultura": 50,
+      "satisfacao_popular": 50,
+      "corrupcao": 50
+    },
+    "decision_history": [],
+    "created_at": "2025-07-03T00:17:34.207Z",
+    "updated_at": "2025-07-03T00:17:34.207Z",
+    "last_decision_at": null,
+    "overall_score": 45,
+    "authoritarianism_level": "Populista",
+    "description": "Estado de Teste é um estado com desafios moderados da região Sudeste, com governo democracia e características populista.",
+    "createdAt": "2025-07-03T00:17:34.209Z",
+    "updatedAt": "2025-07-03T00:17:34.209Z"
+  },
+  {
+    "id": null,
+    "name": "Estado do Rio de Janeiro Virtual",
+    "region": "Sudeste",
+    "government_type": "Tecnocracia",
+    "player_id": "player_1751502568273_qg3hg82n1",
+    "indicators": {
+      "economia": 50,
+      "educacao": 50,
+      "saude": 50,
+      "seguranca": 50,
+      "cultura": 50,
+      "satisfacao_popular": 50,
+      "corrupcao": 50
+    },
+    "decision_history": [],
+    "created_at": "2025-07-03T00:29:28.283Z",
+    "updated_at": "2025-07-03T00:29:28.283Z",
+    "last_decision_at": null,
+    "overall_score": 45,
+    "authoritarianism_level": "Populista",
+    "description": "Estado do Rio de Janeiro Virtual é um estado com desafios moderados da região Sudeste, com governo tecnocracia e características populista.",
+    "createdAt": "2025-07-03T00:29:28.283Z",
+    "updatedAt": "2025-07-03T00:29:28.283Z"
+  },
+  {
+    "id": null,
+    "name": "parana",
+    "region": "Norte",
+    "government_type": "Democracia",
+    "player_id": "player_1751740308201_9lxzkdilu",
+    "indicators": {
+      "economia": 50,
+      "educacao": 50,
+      "saude": 50,
+      "seguranca": 50,
+      "cultura": 50,
+      "satisfacao_popular": 50,
+      "corrupcao": 50
+    },
+    "decision_history": [],
+    "created_at": "2025-07-05T18:31:48.249Z",
+    "updated_at": "2025-07-05T18:31:48.249Z",
+    "last_decision_at": null,
+    "overall_score": 45,
+    "authoritarianism_level": "Populista",
+    "description": "parana é um estado com desafios moderados da região Norte, com governo democracia e características populista.",
+    "createdAt": "2025-07-05T18:31:48.250Z",
+    "updatedAt": "2025-07-05T18:31:48.250Z"
+  }
+]
